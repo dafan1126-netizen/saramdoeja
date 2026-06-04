@@ -1636,6 +1636,32 @@ function App() {
   const [loaded,     setLoaded]     = useState(false);
   const [gender,     setGender]     = useState('m');
   const [syncMsg,    setSyncMsg]    = useState('');
+  const [syncReady,  setSyncReady]  = useState(false);
+  const hydratedRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const updatedAtRef = useRef(0);
+  const remoteUpdatedAtRef = useRef(0);
+  const remoteCheckedRef = useRef(false);
+  const backupTakenRef = useRef(false);
+
+  const markDirty = () => {
+    if (!dirtyRef.current) backupTakenRef.current = false;
+    dirtyRef.current = true;
+    updatedAtRef.current = Date.now();
+  };
+
+  const dataScore = (d={}) =>
+    Object.keys(d.history||{}).length * 100 +
+    Object.keys(d.missionHistory||{}).length * 10 +
+    (d.missions||[]).length +
+    (d.nickname ? 1 : 0);
+
+  const isMeaningfulData = (d={}) =>
+    Object.keys(d.history||{}).length > 0 ||
+    Object.keys(d.missionHistory||{}).length > 0 ||
+    !!d.nickname ||
+    (d.missions||[]).some(m=>m.done) ||
+    (d.missions||[]).some(m=>!String(m.id||'').startsWith('dm'));
 
   useEffect(()=>{
     const initFromData = (saved, skipOnboarding=false) => {
@@ -1661,12 +1687,14 @@ function App() {
       setNickname(saved.nickname||'');
       setLang(saved.language||'ko');
       setGender(saved.gender||'m');
+      updatedAtRef.current = Number(saved.updatedAt)||0;
       setLoaded(true);
       if (!skipOnboarding && !saved.nickname) setShowOnboarding(true);
     };
 
     // 1) 먼저 localStorage로 빠르게 초기화
-    const local = JSON.parse(localStorage.getItem('sarameoja_v2')||'{}');
+    let local = {};
+    try { local = JSON.parse(localStorage.getItem('sarameoja_v2')||'{}'); } catch {}
     initFromData(local);
 
     // 2) 시트에서 최신 데이터 fetch (백그라운드)
@@ -1677,46 +1705,59 @@ function App() {
       const history = d.history
         ? Object.fromEntries(Object.entries(d.history).map(([k,v])=>[k, typeof v==='object'?v.score:v]))
         : {};
-      return {missions, history, missionHistory:d.missionHistory||{}, achDates:d.achDates||{}, nickname:d.nickname||d.nick||'', language:d.language||d.lang||'ko', lastDate:d.lastDate||null, gender:d.gender||'m'};
+      return {missions, history, missionHistory:d.missionHistory||{}, achDates:d.achDates||{}, nickname:d.nickname||d.nick||'', language:d.language||d.lang||'ko', lastDate:d.lastDate||null, gender:d.gender||'m', updatedAt:Number(d.updatedAt)||0};
     };
     fetch(`${GAS_URL}?action=loadState&t=${Date.now()}`)
       .then(r=>r.json())
       .then(j=>{
         if (j.ok && j.data) {
+          remoteCheckedRef.current = true;
           const d = migrateData(j.data);
+          remoteUpdatedAtRef.current = d.updatedAt;
           const today = getDateStr();
-          // 시트 데이터가 더 최신이거나 로컬이 비어있으면 사용
-          const sheetDate = d.lastDate || '';
-          const localDate = local.lastDate || '';
-          if (sheetDate >= localDate) {
+          // updatedAt이 있으면 정확한 수정 시각으로 비교한다.
+          // 구버전 데이터끼리는 기록이 더 풍부한 쪽을 우선해 빈 데이터 덮어쓰기를 막는다.
+          const shouldUseSheet = !isMeaningfulData(local) ||
+            (d.updatedAt > (Number(local.updatedAt)||0)) ||
+            (!d.updatedAt && !local.updatedAt && dataScore(d) > dataScore(local));
+          if (shouldUseSheet) {
             initFromData(d, !!local.nickname);
           }
         }
       })
-      .catch(()=>{});
+      .catch(()=>{})
+      .finally(()=>{
+        hydratedRef.current = true;
+        setSyncReady(true);
+      });
   },[]);
 
   useEffect(()=>{
-    if (!loaded) return;
-    localStorage.setItem('sarameoja_v2', JSON.stringify({
-      missions, history, missionHistory, achDates, nickname, language:lang, gender, lastDate:getDateStr(),
-    }));
-  },[missions, history, missionHistory, nickname, lang, gender, loaded]);
+    if (!loaded || !syncReady || !hydratedRef.current) return;
+    const next = {missions, history, missionHistory, achDates, nickname, language:lang, gender, lastDate:getDateStr(), updatedAt:updatedAtRef.current};
+    const previous = localStorage.getItem('sarameoja_v2');
+    if (dirtyRef.current && !backupTakenRef.current && previous) {
+      localStorage.setItem('sarameoja_v2_backup', previous);
+      backupTakenRef.current = true;
+    }
+    localStorage.setItem('sarameoja_v2', JSON.stringify(next));
+  },[missions, history, missionHistory, achDates, nickname, lang, gender, loaded, syncReady]);
 
-  // 자동 구글 시트 동기화 (변경 후 1.5초 debounce)
+  // 초기 로딩은 절대 업로드하지 않고, 사용자 변경 후에만 자동 동기화한다.
   const syncTimerRef = useRef(null);
   useEffect(()=>{
-    if (!loaded) return;
+    if (!loaded || !hydratedRef.current || !dirtyRef.current) return;
     clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(syncToSheets, 1500);
     return ()=>clearTimeout(syncTimerRef.current);
-  },[missions, history, loaded]);
+  },[missions, history, missionHistory, achDates, nickname, lang, gender, loaded]);
 
   const todayScore = useMemo(()=>missions.filter(m=>m.done).reduce((s,m)=>s+m.exp,0),[missions]);
 
   const handleToggle = (id) => {
     const mission = missions.find(m=>m.id===id);
     if (!mission) return;
+    markDirty();
     const prevScore = todayScore;
     const prevStage = getStageIdx(prevScore);
     const newScore = mission.done ? prevScore - mission.exp : prevScore + mission.exp;
@@ -1745,19 +1786,49 @@ function App() {
     const history = d.history
       ? Object.fromEntries(Object.entries(d.history).map(([k,v])=>[k, typeof v==='object'?v.score:v]))
       : {};
-    return {missions, history, nickname:d.nickname||d.nick||'', language:d.language||d.lang||'ko'};
+    return {missions, history, missionHistory:d.missionHistory||{}, achDates:d.achDates||{}, nickname:d.nickname||d.nick||'', language:d.language||d.lang||'ko', lastDate:d.lastDate||null, gender:d.gender||'m', updatedAt:Number(d.updatedAt)||0};
   };
 
   const syncToSheets = useCallback(async () => {
+    if (!hydratedRef.current || !dirtyRef.current) return;
+    // 서버 상태 확인에 실패한 세션에서는 로컬만 저장하고 원격 덮어쓰기는 금지한다.
+    if (!remoteCheckedRef.current) {
+      setSyncMsg('error');
+      setTimeout(()=>setSyncMsg(''), 2000);
+      return;
+    }
+    const state = {missions, history, missionHistory, achDates, nickname, language:lang, gender, lastDate:getDateStr(), updatedAt:updatedAtRef.current||Date.now()};
+    if (!isMeaningfulData(state)) {
+      setSyncMsg('error');
+      setTimeout(()=>setSyncMsg(''), 2000);
+      return;
+    }
     setSyncMsg('syncing');
     try {
-      const payload = JSON.stringify({missions, history, missionHistory, achDates, nickname, language:lang, gender, lastDate:getDateStr()});
+      // 저장 직전 서버가 다른 페이지에서 변경됐는지 다시 확인한다.
+      const latestResponse = await fetch(`${GAS_URL}?action=loadState&t=${Date.now()}`);
+      const latestJson = await latestResponse.json();
+      if (!latestJson.ok || !latestJson.data) throw new Error('remote-check-failed');
+      const latest = migrateData(latestJson.data);
+      const hasConflict =
+        latest.updatedAt > remoteUpdatedAtRef.current ||
+        (remoteUpdatedAtRef.current > 0 && !latest.updatedAt);
+      if (hasConflict) {
+        setSyncMsg('error');
+        setTimeout(()=>setSyncMsg(''), 2000);
+        return;
+      }
+      const payload = JSON.stringify(state);
       const r = await fetch(`${GAS_URL}?action=saveState&payload=${encodeURIComponent(payload)}`);
       const j = await r.json();
+      if (j.ok) {
+        dirtyRef.current = false;
+        remoteUpdatedAtRef.current = state.updatedAt;
+      }
       setSyncMsg(j.ok ? 'ok' : 'error');
     } catch { setSyncMsg('error'); }
     setTimeout(()=>setSyncMsg(''), 2000);
-  }, [missions, history, missionHistory, nickname, lang]);
+  }, [missions, history, missionHistory, achDates, nickname, lang, gender]);
 
   const handleSyncLoad = async () => {
     setSyncMsg('syncing');
@@ -1766,6 +1837,9 @@ function App() {
       const j = await r.json();
       if (j.ok && j.data) {
         const d = migrateData(j.data);
+        dirtyRef.current = false;
+        updatedAtRef.current = d.updatedAt;
+        remoteUpdatedAtRef.current = d.updatedAt;
         if (d.missions.length)  setMissions(d.missions);
         if (Object.keys(d.history).length) setHistory(d.history);
         if (d.missionHistory && Object.keys(d.missionHistory).length) setMissionHistory(d.missionHistory);
@@ -1780,12 +1854,13 @@ function App() {
   };
 
   const handleSyncSave = async () => { await syncToSheets(); };
-  const handleAddMission  = (mission) => setMissions(prev=>[...prev, mission]);
-  const handleEditMission = (updated) => setMissions(prev=>prev.map(m=>m.id===updated.id?updated:m));
-  const handleReorderMissions = (newMissions) => setMissions(newMissions);
+  const handleAddMission  = (mission) => { markDirty(); setMissions(prev=>[...prev, mission]); };
+  const handleEditMission = (updated) => { markDirty(); setMissions(prev=>prev.map(m=>m.id===updated.id?updated:m)); };
+  const handleReorderMissions = (newMissions) => { markDirty(); setMissions(newMissions); };
 
   const handleDeleteMission = (id) => {
     const mission = missions.find(m=>m.id===id);
+    markDirty();
     if (mission && mission.done) {
       const today = getDateStr();
       setHistory(h=>({...h,[today]:Math.max(0,(h[today]||0)-mission.exp)}));
@@ -1793,11 +1868,11 @@ function App() {
     setMissions(prev=>prev.filter(m=>m.id!==id));
   };
 
-  if (!loaded) return null;
+  if (!loaded || !syncReady) return null;
 
   return <>
     {achUnlock && <AchievementUnlockEffect ach={achUnlock} lang={lang} onClose={()=>setAchUnlock(null)}/>}
-    {showOnboarding && <Onboarding onComplete={(name,l,g)=>{setNickname(name);setLang(l);setGender(g||'m');setShowOnboarding(false);}}/>}
+    {showOnboarding && <Onboarding onComplete={(name,l,g)=>{markDirty();setNickname(name);setLang(l);setGender(g||'m');setShowOnboarding(false);}}/>}
     {evolutionStage!==null && <EvolutionOverlay stageIdx={evolutionStage} lang={lang} gender={gender} onClose={()=>setEvolutionStage(null)}/>}
     {syncMsg && (
       <div style={{position:'absolute',top:14,right:16,zIndex:3000,display:'flex',alignItems:'center',gap:5,background:'#fff',border:'1px solid #f0f0f0',borderRadius:50,padding:'5px 10px 5px 8px',boxShadow:'0 2px 8px rgba(0,0,0,0.08)'}}>
@@ -1832,8 +1907,8 @@ function App() {
     )}
 
     {activeTab==='today' && !showOnboarding && <TodayTab missions={missions} todayScore={todayScore} lang={lang} gender={gender} onToggle={handleToggle} onAddMission={handleAddMission} onEditMission={handleEditMission} onDeleteMission={handleDeleteMission} onReorder={handleReorderMissions} missionHistory={missionHistory}/>}
-    {activeTab==='records' && <RecordsTab history={history} lang={lang} todayScore={todayScore} onHistoryEdit={(date,score)=>setHistory(h=>({...h,[date]:score}))}/>}
-    {activeTab==='profile' && <ProfileTab nickname={nickname} lang={lang} gender={gender} history={history} todayScore={todayScore} onNicknameChange={setNickname} onLangChange={setLang} onGenderChange={setGender} achDates={achDates} onAchieve={(id,date)=>{setAchDates(prev=>({...prev,[id]:date}));}}  onAchUnlock={(ach)=>setAchUnlock(ach)}/>}
+    {activeTab==='records' && <RecordsTab history={history} lang={lang} todayScore={todayScore} onHistoryEdit={(date,score)=>{markDirty();setHistory(h=>({...h,[date]:score}));}}/>}
+    {activeTab==='profile' && <ProfileTab nickname={nickname} lang={lang} gender={gender} history={history} todayScore={todayScore} onNicknameChange={(v)=>{markDirty();setNickname(v);}} onLangChange={(v)=>{markDirty();setLang(v);}} onGenderChange={(v)=>{markDirty();setGender(v);}} achDates={achDates} onAchieve={(id,date)=>{markDirty();setAchDates(prev=>({...prev,[id]:date}));}}  onAchUnlock={(ach)=>setAchUnlock(ach)}/>}
 
     <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} lang={lang}/>
   </>;
