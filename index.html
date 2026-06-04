@@ -1621,6 +1621,8 @@ function BottomNav({activeTab, setActiveTab, lang}) {
 
 // ── App ────────────────────────────────────────────────────────────────────────
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxAtaPLesDfs9xLgCVarp05llb_uAbxsmrlEFc3c2IY2jHqR7W9hSO7jxzwjLhDpfcyAw/exec';
+// 서버와 브라우저 저장소가 모두 비었을 때 사용하는 마지막 복구 지점
+const RECOVERY_STATE = {"missions":[{"id":"dm1","name":"有氧运动","exp":30,"done":true,"colorIdx":null},{"id":"1778110166632","name":"重力运动","exp":30,"done":true},{"id":"1778110204755","name":"散步5000步以上","exp":20,"done":false},{"id":"1780127423139","name":"深蹲50个","exp":20,"done":false,"colorIdx":5}],"history":{"2026-04-29":45,"2026-05-06":0,"2026-05-09":40,"2026-05-13":60,"2026-05-14":60,"2026-05-15":80,"2026-05-17":80,"2026-05-18":60,"2026-05-19":80,"2026-05-20":80,"2026-05-21":80,"2026-05-24":80,"2026-05-23":60,"2026-05-16":80,"2026-05-26":0,"2026-05-25":30,"2026-05-27":20,"2026-05-28":60,"2026-05-29":60,"2026-05-30":100,"2026-05-31":80,"2026-06-04":60},"missionHistory":{"dm1":{"2026-05-31":true,"2026-06-04":true},"1778110166632":{"2026-05-31":true,"2026-06-04":true},"1780127423139":{},"1778110204755":{"2026-05-31":true}},"achDates":{},"nickname":"finger","language":"ko","gender":"m","lastDate":"2026-06-04","updatedAt":1780559467000};
 
 function App() {
   const [missions,   setMissions]   = useState([]);
@@ -1714,6 +1716,10 @@ function App() {
           remoteCheckedRef.current = true;
           const d = migrateData(j.data);
           remoteUpdatedAtRef.current = d.updatedAt;
+          if (!isMeaningfulData(local) && !isMeaningfulData(d)) {
+            initFromData(RECOVERY_STATE);
+            return;
+          }
           const today = getDateStr();
           // updatedAt이 있으면 정확한 수정 시각으로 비교한다.
           // 구버전 데이터끼리는 기록이 더 풍부한 쪽을 우선해 빈 데이터 덮어쓰기를 막는다.
