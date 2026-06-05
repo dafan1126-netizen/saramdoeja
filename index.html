@@ -7,7 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:#fff;overflow:hidden;height:100dvh;-webkit-font-smoothing:antialiased}
+    html{background:#f7f8f5}
+    body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:#f7f8f5;overflow:hidden;height:100dvh;-webkit-font-smoothing:antialiased}
     #root{width:100%;max-width:430px;height:100dvh;margin:0 auto;background:#fff;display:flex;flex-direction:column;position:relative;overflow:hidden;padding-top:env(safe-area-inset-top,0px);box-sizing:border-box}
     .tab-content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     .bottom-nav{height:64px;border-top:1px solid #000;display:flex;flex-shrink:0;background:#fff}
@@ -108,6 +109,7 @@
     :root{--app-bg:#f7f8f5;--ink:#17202b;--muted:#93a0af;--line:#e5e8e6;--card:#fff;--blue:#3672cc;--blue-soft:#eaf1ff;--green:#278b69}
     body{background:#d9dfe7;color:var(--ink)}
     #root{background:var(--app-bg);box-shadow:0 35px 90px rgba(20,30,45,.16)}
+    #root::before{content:"";position:absolute;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);background:var(--app-bg);z-index:0;pointer-events:none}
     .tab-content{background:var(--app-bg);padding:22px 20px 96px}
     .design-topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
     .design-eyebrow{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
@@ -124,6 +126,7 @@
     .monster-wrap{height:184px;display:grid;place-items:center;position:relative;padding:0;margin:2px 0 4px}
     .monster-halo{display:none}
     .monster-frame{position:relative;z-index:1;width:210px;height:190px;display:grid;place-items:center;background:#fff;border:none;box-shadow:none;overflow:visible}
+    .monster-frame.evolving{background:transparent}
     .monster-frame img{position:relative;z-index:1;filter:none}
     .monster-frame.evolving img{animation:characterMorph 950ms cubic-bezier(.2,.8,.2,1) both}
     .morph-ring{position:absolute;inset:16px;border-radius:50%;border:1.5px solid rgba(54,114,204,.45);opacity:0;transform:scale(.55);pointer-events:none}
@@ -161,6 +164,10 @@
     .bottom-nav{position:absolute;bottom:0;left:0;right:0;height:82px;padding:10px 18px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;background:rgba(247,248,245,.92);backdrop-filter:blur(18px);border-top:1px solid var(--line);z-index:1000}
     .nav-tab{border-radius:16px;color:#a2acb8;font-size:9px;font-family:"JetBrains Mono",monospace;letter-spacing:.04em}
     .nav-tab.active{background:#fff;color:#25364b;box-shadow:0 4px 18px rgba(31,45,61,.08)}
+    @media (max-width:430px){
+      html,body{background:var(--app-bg)}
+      #root{max-width:none;width:100%;box-shadow:none}
+    }
   </style>
 </head>
 <body>
@@ -251,6 +258,19 @@ const TR = {
   howToPlay:   {ko:'이렇게 플레이하세요', en:"Here's how to play", zh:'游戏规则', ja:'プレイ方法', es:'Cómo jugar'},
   delete:      {ko:'삭제',     en:'Delete',   zh:'删除',   ja:'削除',        es:'Eliminar'},
   editMission: {ko:'미션 수정', en:'Edit mission', zh:'编辑任务', ja:'ミッション編集', es:'Editar misión'},
+  goodMorning: {ko:'좋은 아침', en:'Good morning', zh:'早上好', ja:'おはよう', es:'Buenos días'},
+  becomeHumanLine: {
+    ko:'{name}, 오늘도 사람이 되어보자.',
+    en:'{name}, become human again today.',
+    zh:'{name}，今天也努力变成人吧。',
+    ja:'{name}、今日も人間になろう。',
+    es:'{name}, volvamos a ser humanos hoy.'
+  },
+  xpToday: {ko:'오늘 XP', en:'XP TODAY', zh:'今日 XP', ja:'今日のXP', es:'XP DE HOY'},
+  nextEvolution: {ko:'다음 진화', en:'NEXT EVOLUTION', zh:'下一次进化', ja:'次の進化', es:'SIGUIENTE EVOLUCIÓN'},
+  evolutionReady: {ko:'진화 준비 완료', en:'EVOLUTION READY', zh:'可以进化', ja:'進化準備完了', es:'EVOLUCIÓN LISTA'},
+  xpLeft: {ko:'{xp} XP 남음', en:'{xp} XP LEFT', zh:'还差 {xp} XP', ja:'あと {xp} XP', es:'FALTAN {xp} XP'},
+  complete: {ko:'완료', en:'COMPLETE', zh:'完成', ja:'完了', es:'COMPLETADO'},
 };
 
 const t = (lang, key) => (TR[key] && TR[key][lang]) || key;
@@ -861,13 +881,14 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
   }, [history, todayScore]);
   const syncState = syncMsg === 'syncing' ? 'syncing' : syncMsg === 'error' ? 'error' : hasLocalChanges ? 'local' : 'synced';
   const syncLabel = syncState === 'syncing' ? 'SYNCING' : syncState === 'error' ? 'ERROR' : syncState === 'local' ? 'LOCAL' : 'SYNCED';
+  const displayName = nickname || 'Finger';
   // stageIdx for MonsterImg
   return (
     <div className="tab-content">
       <div className="design-topbar">
         <div>
-          <div className="design-eyebrow">Good morning</div>
-          <div className="design-hello">{nickname || 'Finger'}, 오늘도 사람이 되어보자.</div>
+          <div className="design-eyebrow">{t(lang,'goodMorning')}</div>
+          <div className="design-hello">{t(lang,'becomeHumanLine').replace('{name}', displayName)}</div>
         </div>
         <div className={`design-sync ${syncState}`}><span className="design-sync-dot"></span>{syncLabel}</div>
       </div>
@@ -877,9 +898,9 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
           <div>
             <div className="design-eyebrow">{t(lang,'todayScore')}</div>
             <div key={scoreAnimKey} className="score-number" style={{display:'inline-block',animation:scoreAnimKey>0?'scorePop 350ms cubic-bezier(.4,0,.2,1)':''}}>{todayScore}</div>
-            <div style={{fontFamily:'"JetBrains Mono",monospace',fontSize:'9px',letterSpacing:'.12em',color:'#9aa6b4',marginTop:8}}>XP TODAY</div>
+            <div style={{fontFamily:'"JetBrains Mono",monospace',fontSize:'9px',letterSpacing:'.12em',color:'#9aa6b4',marginTop:8}}>{t(lang,'xpToday')}</div>
           </div>
-          <div className="stage-badge">STAGE {stageIdx+1} · {(stage.en||'').toUpperCase()}</div>
+          <div className="stage-badge">STAGE {stageIdx+1} · {(stage[lang]||stage.en||'').toUpperCase()}</div>
         </div>
 
         <div className="monster-wrap">
@@ -888,15 +909,15 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
             <span className="morph-ring"/>
             {Array.from({length:8},(_,i)=><span key={i} className="morph-spark"/>)}
             <div style={{width:stageIdx===0?162:196,height:stageIdx===0?162:196}}>
-              <MonsterImg stageIdx={stageIdx} gender={gender}/>
+              <MonsterImg stageIdx={stageIdx} gender={gender} alpha={isMorphing}/>
             </div>
           </div>
         </div>
 
         <div className="xp-bar-wrap">
           <div className="xp-bar-labels">
-            <span>{nextStage ? 'NEXT EVOLUTION' : 'EVOLUTION READY'}</span>
-            <span>{nextStage ? `${xpLeft} XP LEFT` : 'MAX'}</span>
+            <span>{nextStage ? t(lang,'nextEvolution') : t(lang,'evolutionReady')}</span>
+            <span>{nextStage ? t(lang,'xpLeft').replace('{xp}', xpLeft) : 'MAX'}</span>
           </div>
           <div className="xp-bar-track">
             <div className="xp-bar-fill" style={{width:`${progress}%`,background:stage.color}}/>
@@ -915,8 +936,8 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
       {/* Missions */}
       <div className="missions-section" ref={missionsRef} onMouseMove={onDragMove} onMouseUp={endDrag} onTouchMove={onDragMove} onTouchEnd={endDrag}>
         <div className="section-head">
-          <div className="section-label">오늘의 퀘스트</div>
-          <div className="section-count">{doneCount} / {missions.length} COMPLETE</div>
+          <div className="section-label">{t(lang,'missions')}</div>
+          <div className="section-count">{doneCount} / {missions.length} {t(lang,'complete')}</div>
         </div>
         {missions.length===0 && <div className="empty-state">{t(lang,'noMissions')}</div>}
         {displayMissions.map((m,idx)=>{
@@ -1373,8 +1394,9 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
                 <div style={{display:'flex',gap:8,marginBottom:14}}>
                   {[['m','♂'],['f','♀']].map(([val,sym])=>(
                     <button key={val} onClick={()=>setGenderInput(val)} style={{
-                      flex:1,padding:'10px',borderRadius:'50px',fontFamily:'inherit',
-                      fontSize:'18px',fontWeight:700,cursor:'pointer',
+                      flex:1,height:44,padding:0,borderRadius:'50px',fontFamily:'inherit',
+                      fontSize:'18px',fontWeight:700,cursor:'pointer',lineHeight:1,
+                      display:'flex',alignItems:'center',justifyContent:'center',
                       border:genderInput===val?'2px solid #000':'1px solid #e0e0e0',
                       background:genderInput===val?'#000':'#fff',
                       color:genderInput===val?'#fff':'#999',
