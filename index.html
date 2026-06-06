@@ -60,12 +60,12 @@
     .records-section{padding:24px}
     .stat-row{display:flex;gap:10px;margin-bottom:20px}
     .stat-card{flex:1;padding:10px 8px;border:1px solid #f0f0f0;border-radius:8px;min-width:0}
-    .stat-label{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#bbb;margin-bottom:6px}
-    .stat-value{font-size:30px;font-weight:800;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums}
-    .stat-main{display:inline-flex;align-items:baseline;gap:4px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .stat-num{display:inline-block;min-width:.68em;text-align:right;line-height:.9;font-variant-numeric:tabular-nums}
-    .stat-unit{font-size:13px;font-weight:400;color:#bbb;line-height:1;white-space:nowrap}
-    .stat-crown{font-size:16px;line-height:1;transform:translateY(-1px)}
+    .stat-label{min-height:30px;display:flex;align-items:flex-start;font-family:"JetBrains Mono",monospace;font-size:9px;line-height:1.45;letter-spacing:0.1em;text-transform:uppercase;color:#bbb;margin-bottom:4px}
+    .stat-value{height:36px;display:flex;align-items:flex-end;font-size:clamp(24px,6.6vw,30px);font-weight:800;letter-spacing:-0.04em;line-height:1;font-variant-numeric:tabular-nums}
+    .stat-main{display:inline-flex;align-items:flex-end;gap:3px;max-width:100%;min-height:32px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .stat-num{display:inline-flex;align-items:flex-end;justify-content:flex-end;min-width:.68em;height:32px;text-align:right;line-height:.82;font-variant-numeric:tabular-nums}
+    .stat-unit{display:inline-flex;align-items:flex-end;height:32px;padding-bottom:2px;font-size:clamp(10px,3vw,13px);font-weight:400;color:#bbb;line-height:1;white-space:nowrap;letter-spacing:-0.03em}
+    .stat-crown{display:inline-flex;align-items:flex-end;height:32px;padding-bottom:2px;font-size:15px;line-height:1}
     .chart-title{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#bbb;margin-bottom:12px}
     .table-wrap{border:1px solid #f0f0f0;border-radius:8px;overflow:hidden}
     .table-row{display:flex;padding:12px 16px;border-bottom:1px solid #f5f5f5;align-items:center}
@@ -77,7 +77,8 @@
     .nickname-row{display:flex;align-items:center;gap:10px;margin-bottom:36px;flex-wrap:wrap}
     .nickname-display-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1}
     .nickname-text{font-size:26px;font-weight:800;letter-spacing:-0.02em;line-height:.95;transform:translateY(-2px)}
-    .gender-symbol{display:block;line-height:1;transform:translateY(-1px)}
+    .gender-symbol{display:grid;place-items:center;width:22px;height:22px}
+    .gender-symbol svg{display:block}
     .lang-grid{display:flex;flex-wrap:wrap;gap:8px}
     .lang-btn{padding:8px 16px;border-radius:50px;border:1px solid #e0e0e0;background:none;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all 150ms}
     .lang-btn.active{background:#000;color:#fff;border-color:#000}
@@ -602,18 +603,22 @@ const ACHIEVEMENTS = [
 ];
 function getMissionStreak(mId, mHistory) {
   const dates = (mHistory && mHistory[mId]) ? mHistory[mId] : {};
-  const dateSet = new Set(Object.keys(dates));
+  const dateSet = new Set(Object.keys(dates).filter(k => dates[k]));
   if (dateSet.size === 0) return {current:0, max:0};
 
+  const allDates = Array.from(dateSet).sort();
+  const todayStr = getDateStr();
+  const latestStr = allDates[allDates.length - 1];
+  const startStr = dateSet.has(todayStr) ? todayStr : latestStr;
+
   let current = 0;
-  let d = new Date(); d.setHours(0,0,0,0);
+  let d = new Date(startStr + 'T00:00:00'); d.setHours(0,0,0,0);
   while (true) {
     const s = getDateStr(d);
     if (dateSet.has(s)) { current++; d.setDate(d.getDate()-1); }
     else break;
   }
 
-  const allDates = Array.from(dateSet).sort();
   let max = 0, run = 1;
   for (let i = 1; i < allDates.length; i++) {
     const prev = new Date(allDates[i-1]+'T00:00:00');
@@ -623,6 +628,14 @@ function getMissionStreak(mId, mHistory) {
   }
   max = Math.max(max, run, current);
   return {current, max};
+}
+
+function formatStatNum(n) {
+  const num = Number(n) || 0;
+  if (Math.abs(num) < 1000) return String(num);
+  const value = num / 1000;
+  const fixed = value >= 10 ? Math.round(value).toString() : value.toFixed(1).replace(/\.0$/, '');
+  return `${fixed}K`;
 }
 
 
@@ -703,6 +716,25 @@ const SoundFX = (() => {
         o.start(t); o.stop(t + 0.28);
         warmBell(ac, 440, t + 0.08, 0.8, 0.12);
         warmBell(ac, 550, t + 0.18, 0.6, 0.08);
+      } catch(e) {}
+    },
+    tap() {
+      try {
+        const ac = go(); if (!ac) return;
+        const t = ac.currentTime;
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        const flt = ac.createBiquadFilter();
+        flt.type = 'highpass';
+        flt.frequency.value = 650;
+        o.type = 'square';
+        o.frequency.setValueAtTime(520, t);
+        o.frequency.exponentialRampToValueAtTime(260, t + 0.045);
+        o.connect(flt); flt.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(0.035, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+        o.start(t);
+        o.stop(t + 0.055);
       } catch(e) {}
     },
     unlock(grade) {
@@ -1205,29 +1237,23 @@ function RecordsTab({history, lang, todayScore, onHistoryEdit}) {
           <div className="stat-card">
             <div className="stat-label">{t(lang,'currentStreak')}</div>
             <div className="stat-value" style={{color:currentStreak>0?"#f24e1e":"#000"}}>
-              <span className="stat-main"><span className="stat-num">{currentStreak}</span><span className="stat-unit">{t(lang,'days')}</span></span>
+              <span className="stat-main"><span className="stat-num">{formatStatNum(currentStreak)}</span><span className="stat-unit">{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card" style={{background:'#fffbf0',borderColor:'#f0d060'}}>
             <div className="stat-label" style={{color:'#c8a020'}}>{t(lang,'longestStreak')}</div>
             <div className="stat-value" style={{color:'#c8a020'}}>
-              <span className="stat-main"><span className="stat-crown">👑</span><span className="stat-num">{longestStreak}</span><span className="stat-unit" style={{color:'#d4b840'}}>{t(lang,'days')}</span></span>
+              <span className="stat-main"><span className="stat-crown">👑</span><span className="stat-num">{formatStatNum(longestStreak)}</span><span className="stat-unit" style={{color:'#d4b840'}}>{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'totalExp')}</div>
-            <div className="stat-value"><span className="stat-main"><span className="stat-num">{totalAchieve}</span><span className="stat-unit">{t(lang,'times')}</span></span></div>
+            <div className="stat-value"><span className="stat-main"><span className="stat-num">{formatStatNum(totalAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span></div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'recentAchieve')}</div>
-            <div className="stat-value" style={{display:"flex",flexDirection:"column",gap:4}}>
-              <span className="stat-main"><span className="stat-num">{recentAchieve}</span><span className="stat-unit">{t(lang,'times')}</span></span>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <div style={{flex:1,height:3,background:'#f0f0f0',borderRadius:2,overflow:'hidden'}}>
-                  <div style={{height:'100%',width:`${Math.min(100,Math.round(recentAchieve/30*100))}%`,background:'#0acf83',borderRadius:2}}/>
-                </div>
-                <span style={{fontSize:10,fontFamily:'"JetBrains Mono",monospace',color:'#bbb',minWidth:28}}>{Math.min(100,Math.round(recentAchieve/30*100))}%</span>
-              </div>
+            <div className="stat-value">
+              <span className="stat-main"><span className="stat-num">{formatStatNum(recentAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span>
             </div>
           </div>
         </div>
@@ -1400,7 +1426,10 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
                   style={{fontSize:'22px',fontWeight:800,letterSpacing:'-0.02em',border:'none',borderBottom:'2px solid #000',outline:'none',background:'transparent',fontFamily:'inherit',width:'100%',marginBottom:18}}
                 />
                 <div style={{display:'flex',gap:8,marginBottom:14}}>
-                  {[['m','♂'],['f','♀']].map(([val,sym])=>(
+                  {[
+                    ['m', <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="10" cy="14" r="5" stroke="currentColor" strokeWidth="2.4"/><path d="M14 10l6-6M16 4h4v4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>],
+                    ['f', <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="5" stroke="currentColor" strokeWidth="2.4"/><path d="M12 14v7M8.5 17.5h7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/></svg>]
+                  ].map(([val,icon])=>(
                     <button key={val} onClick={()=>setGenderInput(val)} style={{
                       flex:1,height:44,padding:0,borderRadius:'50px',fontFamily:'inherit',
                       fontSize:'18px',fontWeight:700,cursor:'pointer',lineHeight:1,
@@ -1408,7 +1437,7 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
                       border:genderInput===val?'2px solid #000':'1px solid #e0e0e0',
                       background:genderInput===val?'#000':'#fff',
                       color:genderInput===val?'#fff':'#999',
-                    }}><span className="gender-symbol">{sym}</span></button>
+                    }}><span className="gender-symbol">{icon}</span></button>
                   ))}
                 </div>
                 <div style={{marginBottom:14}}>
@@ -1440,29 +1469,23 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
           <div className="stat-card">
             <div className="stat-label">{t(lang,'currentStreak')}</div>
             <div className="stat-value" style={{color:currentStreak>0?"#f24e1e":"#000"}}>
-              <span className="stat-main"><span className="stat-num">{currentStreak}</span><span className="stat-unit">{t(lang,'days')}</span></span>
+              <span className="stat-main"><span className="stat-num">{formatStatNum(currentStreak)}</span><span className="stat-unit">{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card" style={{background:'#fffbf0',borderColor:'#f0d060'}}>
             <div className="stat-label" style={{color:'#c8a020'}}>{t(lang,'longestStreak')}</div>
             <div className="stat-value" style={{color:'#c8a020'}}>
-              <span className="stat-main"><span className="stat-crown">👑</span><span className="stat-num">{longestStreak}</span><span className="stat-unit" style={{color:'#d4b840'}}>{t(lang,'days')}</span></span>
+              <span className="stat-main"><span className="stat-crown">👑</span><span className="stat-num">{formatStatNum(longestStreak)}</span><span className="stat-unit" style={{color:'#d4b840'}}>{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'totalExp')}</div>
-            <div className="stat-value"><span className="stat-main"><span className="stat-num">{totalAchieve}</span><span className="stat-unit">{t(lang,'times')}</span></span></div>
+            <div className="stat-value"><span className="stat-main"><span className="stat-num">{formatStatNum(totalAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span></div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'recentAchieve')}</div>
-            <div className="stat-value" style={{display:"flex",flexDirection:"column",gap:4}}>
-              <span className="stat-main"><span className="stat-num">{recentAchieve}</span><span className="stat-unit">{t(lang,'times')}</span></span>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <div style={{flex:1,height:3,background:'#f0f0f0',borderRadius:2,overflow:'hidden'}}>
-                  <div style={{height:'100%',width:`${Math.min(100,Math.round(recentAchieve/30*100))}%`,background:'#0acf83',borderRadius:2}}/>
-                </div>
-                <span style={{fontSize:10,fontFamily:'"JetBrains Mono",monospace',color:'#bbb',minWidth:28}}>{Math.min(100,Math.round(recentAchieve/30*100))}%</span>
-              </div>
+            <div className="stat-value">
+              <span className="stat-main"><span className="stat-num">{formatStatNum(recentAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span>
             </div>
           </div>
         </div>
@@ -1767,10 +1790,19 @@ function BottomNav({activeTab, setActiveTab, lang}) {
 {id:'profile', label:t(lang,'profile'),
       icon:(a)=><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="4" stroke="currentColor" strokeWidth={a?2.5:1.5} fill={a?'currentColor':'none'}/><path d="M3 20c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth={a?2.5:1.5} strokeLinecap="round"/></svg>},
   ];
+  const selectTab = (id) => {
+    if (id === activeTab) {
+      if (navigator.vibrate) navigator.vibrate(10);
+      return;
+    }
+    SoundFX.tap();
+    if (navigator.vibrate) navigator.vibrate(18);
+    setActiveTab(id);
+  };
   return (
     <div className="bottom-nav">
       {tabs.map(tab=>(
-        <button key={tab.id} className={`nav-tab${activeTab===tab.id?' active':''}`} onClick={()=>setActiveTab(tab.id)}>
+        <button key={tab.id} className={`nav-tab${activeTab===tab.id?' active':''}`} onClick={()=>selectTab(tab.id)}>
           {tab.icon(activeTab===tab.id)}
           {tab.label}
         </button>
@@ -1831,15 +1863,21 @@ function App() {
       const today = getDateStr();
       let ms = saved.missions || DEFAULT_MISSIONS;
       let hist = saved.history || {};
+      let mHist = saved.missionHistory ? JSON.parse(JSON.stringify(saved.missionHistory)) : {};
       if (saved.lastDate && saved.lastDate !== today) {
         const prevScore = ms.filter(m=>m.done).reduce((s,m)=>s+m.exp,0);
         if (prevScore > 0) hist = {...hist, [saved.lastDate]: prevScore};
+        ms.forEach(m=>{
+          if(m.done){
+            if(!mHist[m.id]) mHist[m.id]={};
+            mHist[m.id][saved.lastDate]=true;
+          }
+        });
         ms = ms.map(m=>({...m, done:false}));
       }
       setMissions(ms);
       setHistory(hist);
       // missionHistory 로드 후, 오늘 done 상태와 동기화
-      let mHist = saved.missionHistory ? JSON.parse(JSON.stringify(saved.missionHistory)) : {};
       if (saved.lastDate === today || !saved.lastDate) {
         ms.forEach(m=>{
           if(m.done){ if(!mHist[m.id]) mHist[m.id]={}; mHist[m.id][today]=true; }
