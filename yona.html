@@ -7,7 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:#fff;overflow:hidden;height:100dvh;-webkit-font-smoothing:antialiased}
+    html{background:#f7f8f5}
+    body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:#f7f8f5;overflow:hidden;height:100dvh;-webkit-font-smoothing:antialiased}
     #root{width:100%;max-width:430px;height:100dvh;margin:0 auto;background:#fff;display:flex;flex-direction:column;position:relative;overflow:hidden;padding-top:env(safe-area-inset-top,0px);box-sizing:border-box}
     .tab-content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     .bottom-nav{height:64px;border-top:1px solid #000;display:flex;flex-shrink:0;background:#fff}
@@ -59,8 +60,12 @@
     .records-section{padding:24px}
     .stat-row{display:flex;gap:10px;margin-bottom:20px}
     .stat-card{flex:1;padding:10px 8px;border:1px solid #f0f0f0;border-radius:8px;min-width:0}
-    .stat-label{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#bbb;margin-bottom:6px}
-    .stat-value{font-size:30px;font-weight:800;letter-spacing:-0.03em;line-height:1}
+    .stat-label{min-height:30px;display:flex;align-items:flex-start;font-family:"JetBrains Mono",monospace;font-size:9px;line-height:1.45;letter-spacing:0.1em;text-transform:uppercase;color:#bbb;margin-bottom:4px}
+    .stat-value{height:36px;display:flex;align-items:flex-end;font-size:clamp(24px,6.6vw,30px);font-weight:800;letter-spacing:-0.04em;line-height:1;font-variant-numeric:tabular-nums}
+    .stat-main{display:inline-flex;align-items:flex-end;gap:3px;max-width:100%;min-height:32px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .stat-num{display:inline-flex;align-items:flex-end;justify-content:flex-end;min-width:.68em;height:32px;text-align:right;line-height:.82;font-variant-numeric:tabular-nums}
+    .stat-unit{display:inline-flex;align-items:flex-end;height:32px;padding-bottom:2px;font-size:clamp(10px,3vw,13px);font-weight:400;color:#bbb;line-height:1;white-space:nowrap;letter-spacing:-0.03em}
+    .stat-crown{display:inline-flex;align-items:flex-end;height:32px;padding-bottom:2px;font-size:15px;line-height:1}
     .chart-title{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#bbb;margin-bottom:12px}
     .table-wrap{border:1px solid #f0f0f0;border-radius:8px;overflow:hidden}
     .table-row{display:flex;padding:12px 16px;border-bottom:1px solid #f5f5f5;align-items:center}
@@ -70,7 +75,10 @@
     .profile-section{padding:32px 24px 48px}
     .profile-avatar{width:64px;height:64px;background:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:800;margin-bottom:16px;letter-spacing:-0.02em}
     .nickname-row{display:flex;align-items:center;gap:10px;margin-bottom:36px;flex-wrap:wrap}
-    .nickname-text{font-size:26px;font-weight:800;letter-spacing:-0.02em}
+    .nickname-display-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1}
+    .nickname-text{font-size:26px;font-weight:800;letter-spacing:-0.02em;line-height:.95;transform:translateY(-2px)}
+    .gender-symbol{display:grid;place-items:center;width:22px;height:22px}
+    .gender-symbol svg{display:block}
     .lang-grid{display:flex;flex-wrap:wrap;gap:8px}
     .lang-btn{padding:8px 16px;border-radius:50px;border:1px solid #e0e0e0;background:none;font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all 150ms}
     .lang-btn.active{background:#000;color:#fff;border-color:#000}
@@ -108,6 +116,7 @@
     :root{--app-bg:#f7f8f5;--ink:#17202b;--muted:#93a0af;--line:#e5e8e6;--card:#fff;--blue:#3672cc;--blue-soft:#eaf1ff;--green:#278b69}
     body{background:#d9dfe7;color:var(--ink)}
     #root{background:var(--app-bg);box-shadow:0 35px 90px rgba(20,30,45,.16)}
+    #root::before{content:"";position:absolute;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);background:var(--app-bg);z-index:0;pointer-events:none}
     .tab-content{background:var(--app-bg);padding:22px 20px 96px}
     .design-topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
     .design-eyebrow{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
@@ -124,6 +133,7 @@
     .monster-wrap{height:184px;display:grid;place-items:center;position:relative;padding:0;margin:2px 0 4px}
     .monster-halo{display:none}
     .monster-frame{position:relative;z-index:1;width:210px;height:190px;display:grid;place-items:center;background:#fff;border:none;box-shadow:none;overflow:visible}
+    .monster-frame.evolving{background:transparent}
     .monster-frame img{position:relative;z-index:1;filter:none}
     .monster-frame.evolving img{animation:characterMorph 950ms cubic-bezier(.2,.8,.2,1) both}
     .morph-ring{position:absolute;inset:16px;border-radius:50%;border:1.5px solid rgba(54,114,204,.45);opacity:0;transform:scale(.55);pointer-events:none}
@@ -161,6 +171,10 @@
     .bottom-nav{position:absolute;bottom:0;left:0;right:0;height:82px;padding:10px 18px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;background:rgba(247,248,245,.92);backdrop-filter:blur(18px);border-top:1px solid var(--line);z-index:1000}
     .nav-tab{border-radius:16px;color:#a2acb8;font-size:9px;font-family:"JetBrains Mono",monospace;letter-spacing:.04em}
     .nav-tab.active{background:#fff;color:#25364b;box-shadow:0 4px 18px rgba(31,45,61,.08)}
+    @media (max-width:430px){
+      html,body{background:var(--app-bg)}
+      #root{max-width:none;width:100%;box-shadow:none}
+    }
   </style>
 </head>
 <body>
@@ -251,6 +265,19 @@ const TR = {
   howToPlay:   {ko:'이렇게 플레이하세요', en:"Here's how to play", zh:'游戏规则', ja:'プレイ方法', es:'Cómo jugar'},
   delete:      {ko:'삭제',     en:'Delete',   zh:'删除',   ja:'削除',        es:'Eliminar'},
   editMission: {ko:'미션 수정', en:'Edit mission', zh:'编辑任务', ja:'ミッション編集', es:'Editar misión'},
+  goodMorning: {ko:'좋은 아침', en:'Good morning', zh:'早上好', ja:'おはよう', es:'Buenos días'},
+  becomeHumanLine: {
+    ko:'{name}, 오늘도 사람이 되어보자.',
+    en:'{name}, become human again today.',
+    zh:'{name}，今天也努力变成人吧。',
+    ja:'{name}、今日も人間になろう。',
+    es:'{name}, volvamos a ser humanos hoy.'
+  },
+  xpToday: {ko:'오늘 XP', en:'XP TODAY', zh:'今日 XP', ja:'今日のXP', es:'XP DE HOY'},
+  nextEvolution: {ko:'다음 진화', en:'NEXT EVOLUTION', zh:'下一次进化', ja:'次の進化', es:'SIGUIENTE EVOLUCIÓN'},
+  evolutionReady: {ko:'진화 준비 완료', en:'EVOLUTION READY', zh:'可以进化', ja:'進化準備完了', es:'EVOLUCIÓN LISTA'},
+  xpLeft: {ko:'{xp} XP 남음', en:'{xp} XP LEFT', zh:'还差 {xp} XP', ja:'あと {xp} XP', es:'FALTAN {xp} XP'},
+  complete: {ko:'완료', en:'COMPLETE', zh:'完成', ja:'完了', es:'COMPLETADO'},
 };
 
 const t = (lang, key) => (TR[key] && TR[key][lang]) || key;
@@ -566,28 +593,32 @@ const ACH_IMGS = {
 const ACHIEVEMENTS = [
   {id:'first_human', name:{ko:'첫 걸음',en:'First Step',zh:'第一步',ja:'最初の一歩'}, desc:{ko:'처음으로 60점 달성',en:'First 60+ score',zh:'首次达成60分',ja:'初めて60点達成'}, grade:'N', img:ACH_IMGS.ach1, check:(s)=>s.total>=1,    getVal:(s)=>s.total, target:1},
   {id:'streak_3',    name:{ko:'3일의 불꽃',en:'3-Day Flame',zh:'三日之火',ja:'3日の炎'}, desc:{ko:'연속 3일 60점↑',en:'3 consecutive days 60+',zh:'连续3天60分↑',ja:'3日連続60点↑'}, grade:'N', img:ACH_IMGS.ach2, check:(s)=>s.maxStreak>=3,  getVal:(s)=>s.currentStreak, target:3},
-  {id:'streak_7',    name:{ko:'일주일의 사람',en:'Week Warrior',zh:'七日之人',ja:'一週間の人'}, desc:{ko:'연속 7일 60점↑',en:'7 consecutive days 60+',zh:'连续7天60분↑',ja:'7日連続60点↑'}, grade:'R', img:ACH_IMGS.ach3, check:(s)=>s.maxStreak>=7,  getVal:(s)=>s.currentStreak, target:7},
-  {id:'streak_15',   name:{ko:'보름달',en:'Full Moon',zh:'满月',ja:'満月'}, desc:{ko:'연속 15일 60점↑',en:'15 consecutive days 60+',zh:'连续15天60분↑',ja:'15日連続60点↑'}, grade:'R', img:ACH_IMGS.ach4, check:(s)=>s.maxStreak>=15, getVal:(s)=>s.currentStreak, target:15},
-  {id:'streak_30',   name:{ko:'한 달의 인간',en:'Monthly Human',zh:'月之人类',ja:'ひと月の人'}, desc:{ko:'연속 30일 60점↑',en:'30 consecutive days 60+',zh:'连续30天60분↑',ja:'30日連続60点↑'}, grade:'SR', img:ACH_IMGS.ach5, check:(s)=>s.maxStreak>=30, getVal:(s)=>s.currentStreak, target:30},
-  {id:'streak_100',  name:{ko:'백일',en:'100 Days',zh:'百日',ja:'百日'}, desc:{ko:'연속 100일 60점↑',en:'100 consecutive days 60+',zh:'连续100天60분↑',ja:'100日連続60点↑'}, grade:'SR', img:ACH_IMGS.ach6, check:(s)=>s.maxStreak>=100,getVal:(s)=>s.currentStreak, target:100},
-  {id:'streak_365',  name:{ko:'사람이 되다',en:'Become Human',zh:'成为人类',ja:'人になる'}, desc:{ko:'연속 365일 60점↑',en:'365 consecutive days 60+',zh:'连续365天60분↑',ja:'365日連続60点↑'}, grade:'SSR', img:ACH_IMGS.ach7, check:(s)=>s.maxStreak>=365,getVal:(s)=>s.currentStreak, target:365},
+  {id:'streak_7',    name:{ko:'일주일의 사람',en:'Week Warrior',zh:'七日之人',ja:'一週間の人'}, desc:{ko:'연속 7일 60점↑',en:'7 consecutive days 60+',zh:'连续7天60分↑',ja:'7日連続60点↑'}, grade:'R', img:ACH_IMGS.ach3, check:(s)=>s.maxStreak>=7,  getVal:(s)=>s.currentStreak, target:7},
+  {id:'streak_15',   name:{ko:'보름달',en:'Full Moon',zh:'满月',ja:'満月'}, desc:{ko:'연속 15일 60점↑',en:'15 consecutive days 60+',zh:'连续15天60分↑',ja:'15日連続60点↑'}, grade:'R', img:ACH_IMGS.ach4, check:(s)=>s.maxStreak>=15, getVal:(s)=>s.currentStreak, target:15},
+  {id:'streak_30',   name:{ko:'한 달의 인간',en:'Monthly Human',zh:'月之人类',ja:'ひと月の人'}, desc:{ko:'연속 30일 60점↑',en:'30 consecutive days 60+',zh:'连续30天60分↑',ja:'30日連続60点↑'}, grade:'SR', img:ACH_IMGS.ach5, check:(s)=>s.maxStreak>=30, getVal:(s)=>s.currentStreak, target:30},
+  {id:'streak_100',  name:{ko:'백일',en:'100 Days',zh:'百日',ja:'百日'}, desc:{ko:'연속 100일 60점↑',en:'100 consecutive days 60+',zh:'连续100天60分↑',ja:'100日連続60点↑'}, grade:'SR', img:ACH_IMGS.ach6, check:(s)=>s.maxStreak>=100,getVal:(s)=>s.currentStreak, target:100},
+  {id:'streak_365',  name:{ko:'사람이 되다',en:'Become Human',zh:'成为人类',ja:'人になる'}, desc:{ko:'연속 365일 60점↑',en:'365 consecutive days 60+',zh:'连续365天60分↑',ja:'365日連続60点↑'}, grade:'SSR', img:ACH_IMGS.ach7, check:(s)=>s.maxStreak>=365,getVal:(s)=>s.currentStreak, target:365},
   {id:'count_10',    name:{ko:'열 번의 다짐',en:'10 Pledges',zh:'十次誓言',ja:'10回の誓い'}, desc:{ko:'누적 60점↑ 10회',en:'10 total achievements',zh:'累计达成10次',ja:'累計10回達成'}, grade:'N', img:ACH_IMGS.ach8, check:(s)=>s.total>=10,     getVal:(s)=>s.total, target:10},
   {id:'count_50',    name:{ko:'오십번째 날',en:'50th Day',zh:'第五十天',ja:'50日目'}, desc:{ko:'누적 60점↑ 50회',en:'50 total achievements',zh:'累计达成50次',ja:'累計50回達成'}, grade:'R', img:ACH_IMGS.ach9, check:(s)=>s.total>=50,     getVal:(s)=>s.total, target:50},
 ];
 function getMissionStreak(mId, mHistory) {
   const dates = (mHistory && mHistory[mId]) ? mHistory[mId] : {};
-  const dateSet = new Set(Object.keys(dates));
+  const dateSet = new Set(Object.keys(dates).filter(k => dates[k]));
   if (dateSet.size === 0) return {current:0, max:0};
 
+  const allDates = Array.from(dateSet).sort();
+  const todayStr = getDateStr();
+  const latestStr = allDates[allDates.length - 1];
+  const startStr = dateSet.has(todayStr) ? todayStr : latestStr;
+
   let current = 0;
-  let d = new Date(); d.setHours(0,0,0,0);
+  let d = new Date(startStr + 'T00:00:00'); d.setHours(0,0,0,0);
   while (true) {
     const s = getDateStr(d);
     if (dateSet.has(s)) { current++; d.setDate(d.getDate()-1); }
     else break;
   }
 
-  const allDates = Array.from(dateSet).sort();
   let max = 0, run = 1;
   for (let i = 1; i < allDates.length; i++) {
     const prev = new Date(allDates[i-1]+'T00:00:00');
@@ -597,6 +628,14 @@ function getMissionStreak(mId, mHistory) {
   }
   max = Math.max(max, run, current);
   return {current, max};
+}
+
+function formatStatNum(n) {
+  const num = Number(n) || 0;
+  if (Math.abs(num) < 1000) return String(num);
+  const value = num / 1000;
+  const fixed = value >= 10 ? Math.round(value).toString() : value.toFixed(1).replace(/\.0$/, '');
+  return `${fixed}K`;
 }
 
 
@@ -679,6 +718,25 @@ const SoundFX = (() => {
         warmBell(ac, 550, t + 0.18, 0.6, 0.08);
       } catch(e) {}
     },
+    tap() {
+      try {
+        const ac = go(); if (!ac) return;
+        const t = ac.currentTime;
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        const flt = ac.createBiquadFilter();
+        flt.type = 'highpass';
+        flt.frequency.value = 650;
+        o.type = 'square';
+        o.frequency.setValueAtTime(520, t);
+        o.frequency.exponentialRampToValueAtTime(260, t + 0.045);
+        o.connect(flt); flt.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(0.035, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+        o.start(t);
+        o.stop(t + 0.055);
+      } catch(e) {}
+    },
     unlock(grade) {
       try {
         const ac = go(); if (!ac) return;
@@ -716,7 +774,7 @@ const SoundFX = (() => {
 })();
 
 
-function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMsg, hasLocalChanges, remoteEnabled, onToggle, onAddMission, onEditMission, onDeleteMission, onReorder, missionHistory}) {
+function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMsg, hasLocalChanges, onToggle, onAddMission, onEditMission, onDeleteMission, onReorder, missionHistory}) {
   const [showModal, setShowModal] = useState(false);
   const [editMission, setEditMission] = useState(null);
   const [floats, setFloats] = useState([]);
@@ -745,14 +803,16 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
   const startAddPress = (e) => {
     e.preventDefault();
     setAddPressing(true);
+    SoundFX.chargeStart();
     clearTimeout(addPressTimer.current);
     addPressTimer.current = setTimeout(()=>{
       setAddPressing(false);
       setShowModal(true);
+      SoundFX.reveal();
       if(navigator.vibrate) navigator.vibrate(25);
     }, PRESS_MS);
   };
-  const cancelAddPress = () => { clearTimeout(addPressTimer.current); setAddPressing(false); };
+  const cancelAddPress = () => { clearTimeout(addPressTimer.current); SoundFX.chargeStop(); setAddPressing(false); };
   const stageIdx = getStageIdx(todayScore);
   const stage2 = STAGES[stageIdx];
   useEffect(()=>{
@@ -860,20 +920,15 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
     });
   }, [history, todayScore]);
   const syncState = syncMsg === 'syncing' ? 'syncing' : syncMsg === 'error' ? 'error' : hasLocalChanges ? 'local' : 'synced';
-  const syncLabel = syncState === 'syncing'
-    ? (remoteEnabled ? 'SYNCING' : 'SAVING')
-    : syncState === 'error'
-      ? 'ERROR'
-      : syncState === 'local'
-        ? 'LOCAL'
-        : (remoteEnabled ? 'SYNCED' : 'SAVED');
+  const syncLabel = syncState === 'syncing' ? 'SYNCING' : syncState === 'error' ? 'ERROR' : syncState === 'local' ? 'LOCAL' : 'SYNCED';
+  const displayName = nickname || APP_DISPLAY_NAME;
   // stageIdx for MonsterImg
   return (
     <div className="tab-content">
       <div className="design-topbar">
         <div>
-          <div className="design-eyebrow">Good morning</div>
-          <div className="design-hello">{nickname || 'Finger'}, 오늘도 사람이 되어보자.</div>
+          <div className="design-eyebrow">{t(lang,'goodMorning')}</div>
+          <div className="design-hello">{t(lang,'becomeHumanLine').replace('{name}', displayName)}</div>
         </div>
         <div className={`design-sync ${syncState}`}><span className="design-sync-dot"></span>{syncLabel}</div>
       </div>
@@ -883,9 +938,9 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
           <div>
             <div className="design-eyebrow">{t(lang,'todayScore')}</div>
             <div key={scoreAnimKey} className="score-number" style={{display:'inline-block',animation:scoreAnimKey>0?'scorePop 350ms cubic-bezier(.4,0,.2,1)':''}}>{todayScore}</div>
-            <div style={{fontFamily:'"JetBrains Mono",monospace',fontSize:'9px',letterSpacing:'.12em',color:'#9aa6b4',marginTop:8}}>XP TODAY</div>
+            <div style={{fontFamily:'"JetBrains Mono",monospace',fontSize:'9px',letterSpacing:'.12em',color:'#9aa6b4',marginTop:8}}>{t(lang,'xpToday')}</div>
           </div>
-          <div className="stage-badge">STAGE {stageIdx+1} · {(stage.en||'').toUpperCase()}</div>
+          <div className="stage-badge">STAGE {stageIdx+1} · {(stage[lang]||stage.en||'').toUpperCase()}</div>
         </div>
 
         <div className="monster-wrap">
@@ -894,15 +949,15 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
             <span className="morph-ring"/>
             {Array.from({length:8},(_,i)=><span key={i} className="morph-spark"/>)}
             <div style={{width:stageIdx===0?162:196,height:stageIdx===0?162:196}}>
-              <MonsterImg stageIdx={stageIdx} gender={gender}/>
+              <MonsterImg stageIdx={stageIdx} gender={gender} alpha={isMorphing}/>
             </div>
           </div>
         </div>
 
         <div className="xp-bar-wrap">
           <div className="xp-bar-labels">
-            <span>{nextStage ? 'NEXT EVOLUTION' : 'EVOLUTION READY'}</span>
-            <span>{nextStage ? `${xpLeft} XP LEFT` : 'MAX'}</span>
+            <span>{nextStage ? t(lang,'nextEvolution') : t(lang,'evolutionReady')}</span>
+            <span>{nextStage ? t(lang,'xpLeft').replace('{xp}', xpLeft) : 'MAX'}</span>
           </div>
           <div className="xp-bar-track">
             <div className="xp-bar-fill" style={{width:`${progress}%`,background:stage.color}}/>
@@ -921,8 +976,8 @@ function TodayTab({missions, history, todayScore, lang, gender, nickname, syncMs
       {/* Missions */}
       <div className="missions-section" ref={missionsRef} onMouseMove={onDragMove} onMouseUp={endDrag} onTouchMove={onDragMove} onTouchEnd={endDrag}>
         <div className="section-head">
-          <div className="section-label">오늘의 퀘스트</div>
-          <div className="section-count">{doneCount} / {missions.length} COMPLETE</div>
+          <div className="section-label">{t(lang,'missions')}</div>
+          <div className="section-count">{doneCount} / {missions.length} {t(lang,'complete')}</div>
         </div>
         {missions.length===0 && <div className="empty-state">{t(lang,'noMissions')}</div>}
         {displayMissions.map((m,idx)=>{
@@ -1182,29 +1237,23 @@ function RecordsTab({history, lang, todayScore, onHistoryEdit}) {
           <div className="stat-card">
             <div className="stat-label">{t(lang,'currentStreak')}</div>
             <div className="stat-value" style={{color:currentStreak>0?"#f24e1e":"#000"}}>
-              {currentStreak}<span style={{fontSize:'13px',fontWeight:400,color:'#bbb',marginLeft:3}}>{t(lang,'days')}</span>
+              <span className="stat-main"><span className="stat-num">{formatStatNum(currentStreak)}</span><span className="stat-unit">{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card" style={{background:'#fffbf0',borderColor:'#f0d060'}}>
             <div className="stat-label" style={{color:'#c8a020'}}>{t(lang,'longestStreak')}</div>
-            <div className="stat-value" style={{color:'#c8a020',display:'flex',alignItems:'baseline',gap:3}}>
-              <span style={{fontSize:'16px',lineHeight:1}}>👑</span>{longestStreak}<span style={{fontSize:'13px',fontWeight:400,color:'#d4b840',marginLeft:3}}>{t(lang,'days')}</span>
+            <div className="stat-value" style={{color:'#c8a020'}}>
+              <span className="stat-main"><span className="stat-crown">👑</span><span className="stat-num">{formatStatNum(longestStreak)}</span><span className="stat-unit" style={{color:'#d4b840'}}>{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'totalExp')}</div>
-            <div className="stat-value">{totalAchieve}<span style={{fontSize:'13px',fontWeight:400,color:'#bbb',marginLeft:3}}>{t(lang,'times')}</span></div>
+            <div className="stat-value"><span className="stat-main"><span className="stat-num">{formatStatNum(totalAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span></div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'recentAchieve')}</div>
-            <div className="stat-value" style={{display:"flex",flexDirection:"column",gap:4}}>
-              <span>{recentAchieve}<span style={{fontSize:'13px',fontWeight:400,color:'#bbb',marginLeft:3}}>{t(lang,'times')}</span></span>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <div style={{flex:1,height:3,background:'#f0f0f0',borderRadius:2,overflow:'hidden'}}>
-                  <div style={{height:'100%',width:`${Math.min(100,Math.round(recentAchieve/30*100))}%`,background:'#0acf83',borderRadius:2}}/>
-                </div>
-                <span style={{fontSize:10,fontFamily:'"JetBrains Mono",monospace',color:'#bbb',minWidth:28}}>{Math.min(100,Math.round(recentAchieve/30*100))}%</span>
-              </div>
+            <div className="stat-value">
+              <span className="stat-main"><span className="stat-num">{formatStatNum(recentAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span>
             </div>
           </div>
         </div>
@@ -1377,14 +1426,18 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
                   style={{fontSize:'22px',fontWeight:800,letterSpacing:'-0.02em',border:'none',borderBottom:'2px solid #000',outline:'none',background:'transparent',fontFamily:'inherit',width:'100%',marginBottom:18}}
                 />
                 <div style={{display:'flex',gap:8,marginBottom:14}}>
-                  {[['m','♂'],['f','♀']].map(([val,sym])=>(
+                  {[
+                    ['m', <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="10" cy="14" r="5" stroke="currentColor" strokeWidth="2.4"/><path d="M14 10l6-6M16 4h4v4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>],
+                    ['f', <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="5" stroke="currentColor" strokeWidth="2.4"/><path d="M12 14v7M8.5 17.5h7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/></svg>]
+                  ].map(([val,icon])=>(
                     <button key={val} onClick={()=>setGenderInput(val)} style={{
-                      flex:1,padding:'10px',borderRadius:'50px',fontFamily:'inherit',
-                      fontSize:'18px',fontWeight:700,cursor:'pointer',
+                      flex:1,height:44,padding:0,borderRadius:'50px',fontFamily:'inherit',
+                      fontSize:'18px',fontWeight:700,cursor:'pointer',lineHeight:1,
+                      display:'flex',alignItems:'center',justifyContent:'center',
                       border:genderInput===val?'2px solid #000':'1px solid #e0e0e0',
                       background:genderInput===val?'#000':'#fff',
                       color:genderInput===val?'#fff':'#999',
-                    }}>{sym}</button>
+                    }}><span className="gender-symbol">{icon}</span></button>
                   ))}
                 </div>
                 <div style={{marginBottom:14}}>
@@ -1404,7 +1457,7 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
                   background:'#000',color:'#fff',letterSpacing:'0.04em',marginTop:4,
                 }}>{t(lang,'save')}</button>
               </div>
-            : <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            : <div className="nickname-display-row">
                 <div className="nickname-text">{nickname}</div>
                 <div style={{fontSize:'18px',color:gender==='f'?'#f24e1e':'#1abcfe',fontWeight:700,lineHeight:1,display:'flex',alignItems:'center',alignSelf:'center'}}>{gender==='f'?'♀':'♂'}</div>
                 <button onClick={()=>{setNameInput(nickname);setGenderInput(gender);setLangInput(lang);setEditing(true);}} style={{background:'none',border:'1px solid #e0e0e0',borderRadius:'50px',padding:'5px 14px',fontSize:'12px',fontWeight:600,cursor:'pointer',fontFamily:'inherit',color:'#555'}}>{t(lang,'edit')}</button>
@@ -1416,29 +1469,23 @@ function ProfileTab({nickname, lang, gender, history, todayScore, onNicknameChan
           <div className="stat-card">
             <div className="stat-label">{t(lang,'currentStreak')}</div>
             <div className="stat-value" style={{color:currentStreak>0?"#f24e1e":"#000"}}>
-              {currentStreak}<span style={{fontSize:'13px',fontWeight:400,color:'#bbb',marginLeft:3}}>{t(lang,'days')}</span>
+              <span className="stat-main"><span className="stat-num">{formatStatNum(currentStreak)}</span><span className="stat-unit">{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card" style={{background:'#fffbf0',borderColor:'#f0d060'}}>
             <div className="stat-label" style={{color:'#c8a020'}}>{t(lang,'longestStreak')}</div>
-            <div className="stat-value" style={{color:'#c8a020',display:'flex',alignItems:'baseline',gap:3}}>
-              <span style={{fontSize:'16px',lineHeight:1}}>👑</span>{longestStreak}<span style={{fontSize:'13px',fontWeight:400,color:'#d4b840',marginLeft:3}}>{t(lang,'days')}</span>
+            <div className="stat-value" style={{color:'#c8a020'}}>
+              <span className="stat-main"><span className="stat-crown">👑</span><span className="stat-num">{formatStatNum(longestStreak)}</span><span className="stat-unit" style={{color:'#d4b840'}}>{t(lang,'days')}</span></span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'totalExp')}</div>
-            <div className="stat-value">{totalAchieve}<span style={{fontSize:'13px',fontWeight:400,color:'#bbb',marginLeft:3}}>{t(lang,'times')}</span></div>
+            <div className="stat-value"><span className="stat-main"><span className="stat-num">{formatStatNum(totalAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span></div>
           </div>
           <div className="stat-card">
             <div className="stat-label">{t(lang,'recentAchieve')}</div>
-            <div className="stat-value" style={{display:"flex",flexDirection:"column",gap:4}}>
-              <span>{recentAchieve}<span style={{fontSize:'13px',fontWeight:400,color:'#bbb',marginLeft:3}}>{t(lang,'times')}</span></span>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <div style={{flex:1,height:3,background:'#f0f0f0',borderRadius:2,overflow:'hidden'}}>
-                  <div style={{height:'100%',width:`${Math.min(100,Math.round(recentAchieve/30*100))}%`,background:'#0acf83',borderRadius:2}}/>
-                </div>
-                <span style={{fontSize:10,fontFamily:'"JetBrains Mono",monospace',color:'#bbb',minWidth:28}}>{Math.min(100,Math.round(recentAchieve/30*100))}%</span>
-              </div>
+            <div className="stat-value">
+              <span className="stat-main"><span className="stat-num">{formatStatNum(recentAchieve)}</span><span className="stat-unit">{t(lang,'times')}</span></span>
             </div>
           </div>
         </div>
@@ -1743,10 +1790,19 @@ function BottomNav({activeTab, setActiveTab, lang}) {
 {id:'profile', label:t(lang,'profile'),
       icon:(a)=><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="4" stroke="currentColor" strokeWidth={a?2.5:1.5} fill={a?'currentColor':'none'}/><path d="M3 20c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" strokeWidth={a?2.5:1.5} strokeLinecap="round"/></svg>},
   ];
+  const selectTab = (id) => {
+    if (id === activeTab) {
+      if (navigator.vibrate) navigator.vibrate(10);
+      return;
+    }
+    SoundFX.tap();
+    if (navigator.vibrate) navigator.vibrate(18);
+    setActiveTab(id);
+  };
   return (
     <div className="bottom-nav">
       {tabs.map(tab=>(
-        <button key={tab.id} className={`nav-tab${activeTab===tab.id?' active':''}`} onClick={()=>setActiveTab(tab.id)}>
+        <button key={tab.id} className={`nav-tab${activeTab===tab.id?' active':''}`} onClick={()=>selectTab(tab.id)}>
           {tab.icon(activeTab===tab.id)}
           {tab.label}
         </button>
@@ -1764,7 +1820,6 @@ const APP_DISPLAY_NAME = 'YONA';
 const APP_DEFAULT_GENDER = 'f';
 const APP_STORAGE_KEY = `sarameoja_v3_${APP_USER_ID}`;
 const APP_BACKUP_KEY = `${APP_STORAGE_KEY}_backup`;
-const ENABLE_REMOTE_SYNC = GAS_URL.startsWith('https://script.google.com/');
 const YONA_INITIAL_STATE = {
   missions: DEFAULT_MISSIONS,
   history: {},
@@ -1788,7 +1843,7 @@ function App() {
   const [achUnlock,  setAchUnlock]  = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loaded,     setLoaded]     = useState(false);
-  const [gender,     setGender]     = useState('m');
+  const [gender,     setGender]     = useState(APP_DEFAULT_GENDER);
   const [syncMsg,    setSyncMsg]    = useState('');
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const [syncReady,  setSyncReady]  = useState(false);
@@ -1824,15 +1879,21 @@ function App() {
       const today = getDateStr();
       let ms = saved.missions || DEFAULT_MISSIONS;
       let hist = saved.history || {};
+      let mHist = saved.missionHistory ? JSON.parse(JSON.stringify(saved.missionHistory)) : {};
       if (saved.lastDate && saved.lastDate !== today) {
         const prevScore = ms.filter(m=>m.done).reduce((s,m)=>s+m.exp,0);
         if (prevScore > 0) hist = {...hist, [saved.lastDate]: prevScore};
+        ms.forEach(m=>{
+          if(m.done){
+            if(!mHist[m.id]) mHist[m.id]={};
+            mHist[m.id][saved.lastDate]=true;
+          }
+        });
         ms = ms.map(m=>({...m, done:false}));
       }
       setMissions(ms);
       setHistory(hist);
       // missionHistory 로드 후, 오늘 done 상태와 동기화
-      let mHist = saved.missionHistory ? JSON.parse(JSON.stringify(saved.missionHistory)) : {};
       if (saved.lastDate === today || !saved.lastDate) {
         ms.forEach(m=>{
           if(m.done){ if(!mHist[m.id]) mHist[m.id]={}; mHist[m.id][today]=true; }
@@ -1852,11 +1913,6 @@ function App() {
     let local = {};
     try { local = JSON.parse(localStorage.getItem(APP_STORAGE_KEY)||'{}'); } catch {}
     initFromData(isMeaningfulData(local) ? local : YONA_INITIAL_STATE);
-    if (!ENABLE_REMOTE_SYNC) {
-      hydratedRef.current = true;
-      setSyncReady(true);
-      return;
-    }
 
     // 2) 시트에서 최신 데이터 fetch (백그라운드)
     const migrateData = (d) => {
@@ -1957,13 +2013,6 @@ function App() {
 
   const syncToSheets = useCallback(async () => {
     if (!hydratedRef.current || !dirtyRef.current) return;
-    if (!ENABLE_REMOTE_SYNC) {
-      dirtyRef.current = false;
-      setHasLocalChanges(false);
-      setSyncMsg('ok');
-      setTimeout(()=>setSyncMsg(''), 1000);
-      return;
-    }
     // 서버 상태 확인에 실패한 세션에서는 로컬만 저장하고 원격 덮어쓰기는 금지한다.
     if (!remoteCheckedRef.current) {
       setSyncMsg('error');
@@ -2047,9 +2096,9 @@ function App() {
 
   return <>
 	    {achUnlock && <AchievementUnlockEffect ach={achUnlock} lang={lang} onClose={()=>setAchUnlock(null)}/>}
-	    {showOnboarding && <Onboarding onComplete={(name,l,g)=>{markDirty();setNickname(name);setLang(l);setGender(g||'m');setShowOnboarding(false);}}/>}
+	    {showOnboarding && <Onboarding onComplete={(name,l,g)=>{markDirty();setNickname(name);setLang(l);setGender(g||APP_DEFAULT_GENDER);setShowOnboarding(false);}}/>}
 
-	    {activeTab==='today' && !showOnboarding && <TodayTab missions={missions} history={history} todayScore={todayScore} lang={lang} gender={gender} nickname={nickname} syncMsg={syncMsg} hasLocalChanges={hasLocalChanges} remoteEnabled={ENABLE_REMOTE_SYNC} onToggle={handleToggle} onAddMission={handleAddMission} onEditMission={handleEditMission} onDeleteMission={handleDeleteMission} onReorder={handleReorderMissions} missionHistory={missionHistory}/>}
+	    {activeTab==='today' && !showOnboarding && <TodayTab missions={missions} history={history} todayScore={todayScore} lang={lang} gender={gender} nickname={nickname} syncMsg={syncMsg} hasLocalChanges={hasLocalChanges} onToggle={handleToggle} onAddMission={handleAddMission} onEditMission={handleEditMission} onDeleteMission={handleDeleteMission} onReorder={handleReorderMissions} missionHistory={missionHistory}/>}
     {activeTab==='records' && <RecordsTab history={history} lang={lang} todayScore={todayScore} onHistoryEdit={(date,score)=>{markDirty();setHistory(h=>({...h,[date]:score}));}}/>}
     {activeTab==='profile' && <ProfileTab nickname={nickname} lang={lang} gender={gender} history={history} todayScore={todayScore} onNicknameChange={(v)=>{markDirty();setNickname(v);}} onLangChange={(v)=>{markDirty();setLang(v);}} onGenderChange={(v)=>{markDirty();setGender(v);}} achDates={achDates} onAchieve={(id,date)=>{markDirty();setAchDates(prev=>({...prev,[id]:date}));}}  onAchUnlock={(ach)=>setAchUnlock(ach)}/>}
 
