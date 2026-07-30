@@ -38,6 +38,9 @@
     .add-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 40px);margin:4px 20px 32px;padding:14px;border:1.5px dashed #b8c4d8;border-radius:50px;background:none;cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:400;color:#93a4c1;letter-spacing:0.54px;text-transform:uppercase;transition:all 150ms}
     .add-btn:hover{border-color:#18202b;color:#18202b;border-style:solid}
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;display:flex;align-items:flex-end}
+    body.tool-sheet-open .bottom-nav{visibility:hidden;pointer-events:none}
+    .tool-modal-overlay{overscroll-behavior:contain}
+    .tool-modal-overlay .modal-sheet{max-height:calc(100% - 12px)!important;padding-bottom:calc(32px + env(safe-area-inset-bottom));overscroll-behavior:contain;scroll-padding-bottom:32px}
     .color-swatch{width:34px;height:34px;border-radius:2px;cursor:pointer;flex-shrink:0;transition:transform 120ms}
     .color-swatch.selected{transform:scale(1.15);outline:2.5px solid #18202b;outline-offset:2px}
     .modal-sheet{background:#fff;width:100%;border-radius:16px 16px 0 0;padding:28px 24px 36px;animation:slideUp 220ms cubic-bezier(.4,0,.2,1);overflow-y:auto}
@@ -2697,12 +2700,33 @@ function ToolTab({lang}) {
   })[lang] || null;
   const [tool, setTool] = useState(loadToolState);
   const [sheet, setSheet] = useState(null);
+  const [toolViewportStyle, setToolViewportStyle] = useState({});
   const [draft, setDraft] = useState('');
   const [drafts, setDrafts] = useState({});
   const [editingExerciseId, setEditingExerciseId] = useState(null);
   const [exerciseEditor, setExerciseEditor] = useState({name:'',target:'20',image:''});
   const [showExerciseImages, setShowExerciseImages] = useState(false);
   const [nutritionEditor, setNutritionEditor] = useState({name:'',unit:''});
+  useEffect(()=>{
+    document.body.classList.toggle('tool-sheet-open',Boolean(sheet));
+    if(!sheet) {
+      setToolViewportStyle({});
+      return ()=>document.body.classList.remove('tool-sheet-open');
+    }
+    const viewport=window.visualViewport;
+    const updateViewport=()=>{
+      if(!viewport) return setToolViewportStyle({});
+      setToolViewportStyle({top:viewport.offsetTop,height:viewport.height,left:0,right:0,bottom:'auto',position:'fixed'});
+    };
+    updateViewport();
+    viewport?.addEventListener('resize',updateViewport);
+    viewport?.addEventListener('scroll',updateViewport);
+    return ()=>{
+      document.body.classList.remove('tool-sheet-open');
+      viewport?.removeEventListener('resize',updateViewport);
+      viewport?.removeEventListener('scroll',updateViewport);
+    };
+  },[sheet]);
   const today = getDateStr();
   const body = (tool.workouts || []).find(w=>w.kind==='body') || DEFAULT_TOOL_STATE.workouts.find(w=>w.kind==='body');
   const water = (tool.workouts || []).find(w=>w.kind==='water') || DEFAULT_TOOL_STATE.workouts.find(w=>w.kind==='water');
@@ -3236,8 +3260,8 @@ function ToolTab({lang}) {
           </button>
         </div>
       </div>
-      {sheet && <div className="modal-overlay" onClick={()=>setSheet(null)}>
-        <div className="modal-sheet" onClick={event=>event.stopPropagation()} style={{maxHeight:'88dvh'}}>
+      {sheet && <div className="modal-overlay tool-modal-overlay" onClick={()=>setSheet(null)} style={toolViewportStyle}>
+        <div className="modal-sheet" onClick={event=>event.stopPropagation()}>
           <div className="modal-title">{
             sheet==='record'?copy.recordTitle:
             sheet==='goal'?copy.goalTitle:
