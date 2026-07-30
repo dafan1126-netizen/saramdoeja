@@ -2406,8 +2406,10 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
   const [pressing, setPressing] = React.useState(null);
   const [filter, setFilter] = React.useState('all');
   const pressTimer = React.useRef(null);
+  const pressArmTimer = React.useRef(null);
   const pressOrigin = React.useRef(null);
   const PRESS_MS = 700;
+  const TOUCH_ARM_MS = 220;
   const prevUnlocked = React.useRef({});
   const achMounted = React.useRef(false);
   React.useEffect(()=>{
@@ -2467,14 +2469,7 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
   }[lang] || {};
   const visibleCards = allCards.filter(a=>filter==='all' || (filter==='earned' ? a.unlocked : !a.unlocked));
 
-  const startPress = (a, e) => {
-    if(e.type==='mousedown') e.preventDefault();
-    if(e.type==='mousedown' && pressTimer._lastTouch && Date.now()-pressTimer._lastTouch<600) return;
-    if(e.type==='touchstart') {
-      pressTimer._lastTouch=Date.now();
-      const touch=e.touches[0];
-      pressOrigin.current=touch?{x:touch.clientX,y:touch.clientY}:null;
-    }
+  const beginCharge = (a) => {
     setPressing(a.id);
     SoundFX.chargeStart();
     clearTimeout(pressTimer.current);
@@ -2485,17 +2480,26 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
       if(navigator.vibrate) navigator.vibrate(25);
     }, PRESS_MS);
   };
+  const startPress = (a, e) => {
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    if(e.isPrimary===false) return;
+    if(e.pointerType==='mouse') e.preventDefault();
+    clearTimeout(pressArmTimer.current);
+    clearTimeout(pressTimer.current);
+    pressOrigin.current={pointerId:e.pointerId,x:e.clientX,y:e.clientY};
+    pressArmTimer.current=setTimeout(()=>beginCharge(a),e.pointerType==='touch'?TOUCH_ARM_MS:0);
+  };
   const cancelPress = () => {
+    clearTimeout(pressArmTimer.current);
     clearTimeout(pressTimer.current);
     SoundFX.chargeStop();
     setPressing(null);
     pressOrigin.current=null;
   };
   const movePress = (e) => {
-    const touch=e.touches[0];
     const origin=pressOrigin.current;
-    if(!touch || !origin) return;
-    if(Math.hypot(touch.clientX-origin.x,touch.clientY-origin.y)>10) cancelPress();
+    if(!origin || origin.pointerId!==e.pointerId) return;
+    if(Math.hypot(e.clientX-origin.x,e.clientY-origin.y)>6) cancelPress();
   };
 
   return (
@@ -2514,13 +2518,11 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
           <div key={a.id} className="ach-card-wrap"
             style={{borderRadius:8,overflow:'hidden',position:'relative',cursor:'pointer',
               boxShadow:'0 2px 8px rgba(0,0,0,0.12)',userSelect:'none',WebkitUserSelect:'none',touchAction:'pan-y'}}
-            onMouseDown={e=>startPress(a,e)}
-            onMouseUp={cancelPress}
-            onMouseLeave={cancelPress}
-            onTouchStart={e=>startPress(a,e)}
-            onTouchEnd={cancelPress}
-            onTouchMove={movePress}
-            onTouchCancel={cancelPress}
+            onPointerDown={e=>startPress(a,e)}
+            onPointerMove={movePress}
+            onPointerUp={cancelPress}
+            onPointerCancel={cancelPress}
+            onPointerLeave={cancelPress}
           >
             {pressing===a.id && (
               <div style={{position:'absolute',inset:0,zIndex:2,pointerEvents:'none',
