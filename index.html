@@ -2406,6 +2406,7 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
   const [pressing, setPressing] = React.useState(null);
   const [filter, setFilter] = React.useState('all');
   const pressTimer = React.useRef(null);
+  const pressOrigin = React.useRef(null);
   const PRESS_MS = 700;
   const prevUnlocked = React.useRef({});
   const achMounted = React.useRef(false);
@@ -2467,9 +2468,13 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
   const visibleCards = allCards.filter(a=>filter==='all' || (filter==='earned' ? a.unlocked : !a.unlocked));
 
   const startPress = (a, e) => {
-    e.preventDefault();
+    if(e.type==='mousedown') e.preventDefault();
     if(e.type==='mousedown' && pressTimer._lastTouch && Date.now()-pressTimer._lastTouch<600) return;
-    if(e.type==='touchstart') pressTimer._lastTouch=Date.now();
+    if(e.type==='touchstart') {
+      pressTimer._lastTouch=Date.now();
+      const touch=e.touches[0];
+      pressOrigin.current=touch?{x:touch.clientX,y:touch.clientY}:null;
+    }
     setPressing(a.id);
     SoundFX.chargeStart();
     clearTimeout(pressTimer.current);
@@ -2484,6 +2489,13 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
     clearTimeout(pressTimer.current);
     SoundFX.chargeStop();
     setPressing(null);
+    pressOrigin.current=null;
+  };
+  const movePress = (e) => {
+    const touch=e.touches[0];
+    const origin=pressOrigin.current;
+    if(!touch || !origin) return;
+    if(Math.hypot(touch.clientX-origin.x,touch.clientY-origin.y)>10) cancelPress();
   };
 
   return (
@@ -2501,13 +2513,13 @@ function AchievementsSection({history, todayScore, lang, achDates, onAchieve, on
         {visibleCards.map(a=>(
           <div key={a.id} className="ach-card-wrap"
             style={{borderRadius:8,overflow:'hidden',position:'relative',cursor:'pointer',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.12)',userSelect:'none',WebkitUserSelect:'none',touchAction:'none'}}
+              boxShadow:'0 2px 8px rgba(0,0,0,0.12)',userSelect:'none',WebkitUserSelect:'none',touchAction:'pan-y'}}
             onMouseDown={e=>startPress(a,e)}
             onMouseUp={cancelPress}
             onMouseLeave={cancelPress}
             onTouchStart={e=>startPress(a,e)}
             onTouchEnd={cancelPress}
-            onTouchMove={cancelPress}
+            onTouchMove={movePress}
             onTouchCancel={cancelPress}
           >
             {pressing===a.id && (
